@@ -1,79 +1,201 @@
-# AI-Powered Robotic Arm Sorting System
+# 🦾 AI-Powered Robotic Arm Sorting System
 
-This project is a complete computer vision and robotics pipeline that detects specific objects (e.g., "oranges") using a webcam and a YOLOv8 AI model, determines their position (Left, Center, Right), and commands an Arduino-controlled robotic arm to pick and place the objects accordingly.
+A complete computer-vision + robotics pipeline that detects objects (e.g. **oranges**) using an external USB webcam and a YOLOv8 AI model, classifies their position (Left / Center / Right), and commands an Arduino-controlled 4-servo robotic arm to pick and place them automatically.
 
-## Project Structure
+---
+
+## 📁 Project Structure
+
 ```text
 robotic_sorting_system/
 │
-├── main.py                # The primary AI loop (vision + sending commands)
-├── vision.py              # Handles YOLOv8 object detection logic
-├── serial_comm.py         # Handles reliable USB communication
-├── config.py              # Stores parameters (COM port, thresholds)
-├── gui_test.py            # A graphical app to test camera & motors manually
-├── requirements.txt       # Python dependencies list
+├── main.py              ← Primary AI loop (vision + serial commands)
+├── vision.py            ← YOLOv8 object detection + debug overlay
+├── serial_comm.py       ← Serial communication to Arduino
+├── config.py            ← All tunable settings (COM port, camera, thresholds)
+├── gui_test.py          ← Manual GUI tester for camera & arm motors
+├── scan_cameras.py      ← Utility to detect available camera indices
+├── requirements.txt     ← Python dependencies
 │
 └── robot_arm/
-    └── robot_arm.ino      # The C++ code you must upload to the Arduino
+    └── robot_arm.ino    ← Arduino firmware (flash this to the Arduino)
 ```
 
-## Hardware Setup
+---
 
-1. **Webcam**: Used for object detection.
-2. **Arduino Uno/Nano**: Handles motor control.
-3. **4 Servo Motors**:
-    - **Base Servo**: Connected to Arduino Pin 3
-    - **Shoulder Servo**: Connected to Arduino Pin 5
-    - **Elbow Servo**: Connected to Arduino Pin 6
-    - **Gripper Servo**: Connected to Arduino Pin 9
+## 🔌 Hardware Connections
 
-## Step-by-Step Usage Guide
+### Arduino → Servo Motors
+
+| Servo        | Arduino Pin | Function                     |
+|--------------|-------------|------------------------------|
+| Base         | **Pin 3**   | Rotates arm Left / Center / Right |
+| Shoulder     | **Pin 5**   | Raises/lowers the upper arm  |
+| Elbow        | **Pin 6**   | Extends/retracts the forearm |
+| Gripper      | **Pin 9**   | Opens and closes the claw    |
+
+> **Power note**: Servo motors draw significant current. Power them from an external 5V supply (e.g. a 2A adapter) with a **shared GND** between the power supply and Arduino. Do NOT power servos directly from the Arduino's 5V pin.
+
+### Servo Wiring (each servo)
+
+| Servo Wire Color | Connect To              |
+|------------------|-------------------------|
+| Brown / Black    | GND (shared ground)     |
+| Red              | 5V external power supply|
+| Orange / Yellow  | Arduino Signal Pin (3 / 5 / 6 / 9) |
+
+### Arduino → PC
+
+Connect the Arduino to your laptop via a **USB-A to USB-B cable** (standard Arduino cable).
+
+### External Webcam → PC
+
+| Camera                | Connection |
+|-----------------------|------------|
+| USB2.0 PC CAMERA      | USB port on laptop |
+
+> The external webcam is automatically detected on index `1`. If detection fails, run `scan_cameras.py` to find the correct index and update `CAMERA_INDEX` in `config.py`.
+
+---
+
+## ⚙️ Arduino: What to Flash
+
+The file to flash is:
+```
+robotic_sorting_system/robot_arm/robot_arm.ino
+```
+
+### What the firmware does
+- Listens on **Serial (9600 baud)** for single-letter commands
+- `L` → picks from the **Left** zone
+- `C` → picks from the **Center** zone
+- `R` → picks from the **Right** zone
+- After every pick, automatically calls `drop_object()` then `goHome()`
+- All servo movements are smooth (`moveSlowly()` — 15ms per degree step)
+
+### Servo positions (tunable in `.ino`)
+
+| Position     | Base | Shoulder | Elbow |
+|--------------|------|----------|-------|
+| Home         | 90°  | 90°      | 90°   |
+| Pick Left    | 135° | 45°      | 45°   |
+| Pick Center  | 90°  | 45°      | 45°   |
+| Pick Right   | 45°  | 45°      | 45°   |
+| Drop         | 0°   | 120°     | 120°  |
+
+### Step-by-Step Arduino Flash Instructions
+
+1. Download and install **Arduino IDE** from [arduino.cc](https://www.arduino.cc/en/software)
+2. Open Arduino IDE
+3. Go to **File → Open** and select `robot_arm/robot_arm.ino`
+4. Connect the Arduino to your laptop via USB
+5. In the IDE, go to **Tools → Board** and select **Arduino Uno** (or your board)
+6. Go to **Tools → Port** and select the COM port your Arduino is on (e.g. `COM9`)
+   > On Windows: open **Device Manager → Ports (COM & LPT)** to confirm the COM port
+7. Click the **Upload (→)** button
+8. Wait for `Done uploading.` to appear in the status bar
+9. **Close** the Arduino IDE Serial Monitor (if open) — it must be closed before running the Python script
+
+---
+
+## 💻 PC Setup: Step-by-Step
 
 ### Step 1: Clone the Repository
-Open your terminal/command prompt and clone the project to your local machine:
 ```bash
 git clone https://github.com/geniusalert/robotic-arm.git
 cd "robotic arm/robotic_sorting_system"
 ```
 
-### Step 2: Flash the Arduino
-1. Open the Arduino IDE.
-2. Open the file `robot_arm/robot_arm.ino`.
-3. Plug in your Arduino via USB.
-4. Select your Board and Port in the IDE (e.g., COM3).
-5. Click **Upload**.
-
-### Step 3: Configure the System
-1. Open `config.py` in your code editor.
-2. Change the `COM_PORT` variable (e.g. "COM3") to match exactly what port your Arduino is plugged into (you can check Device Manager on Windows or look at the Arduino IDE dropdown).
-
-### Step 4: Install Python Packages
-From your terminal, ensure you are in the `robotic_sorting_system` directory and run:
+### Step 2: Install Python Dependencies
 ```bash
 pip install -r requirements.txt
 ```
-*(This will install OpenCV, Ultralytics YOLO, PySerial, and Pillow).*
+This installs: `ultralytics` (YOLOv8), `opencv-python`, `pyserial`, `Pillow`
 
-### Step 5: Test the Connections (Crucial!)
-Before running the fully autonomous AI, you should verify the hardware works.
-1. Make sure your webcam is uncovered and plugged in.
-2. Make sure your Arduino is plugged in via USB.
-3. Run the GUI Tester tool:
-   ```bash
-   python gui_test.py
-   ```
-4. **What to look for:**
-   - The top screen should show your live webcam feed smoothly.
-   - The bottom logs should prominently say "Camera OK" and "Connected to COM3".
-   - **Action**: Click the "Pick Center", "Pick Left", and "Pick Right" buttons. Your robotic arm should move smoothly to execute a grab and drop sequence. If this works, your hardware is perfectly communicating.
+### Step 3: Configure Settings
+Open `config.py` and verify/update:
 
-### Step 6: Run the Fully Autonomous AI
-Once you've confirmed the hardware manually works, close the `gui_test.py` window to free up the camera and serial ports. Now, start the autonomous AI script:
+```python
+COM_PORT      = "COM9"    # ← Match your Arduino's COM port (check Device Manager)
+CAMERA_INDEX  = 1         # ← 1 = external USB webcam, 0 = built-in laptop cam
+CAMERA_FPS    = 8         # ← USB2.0 PC CAMERA native FPS
+CAMERA_WIDTH  = 1280      # ← Camera resolution width
+CAMERA_HEIGHT = 720       # ← Camera resolution height
+LEFT_THRESHOLD  = 200     # ← Pixel X boundary for Left zone
+RIGHT_THRESHOLD = 400     # ← Pixel X boundary for Right zone
+CONFIDENCE_THRESHOLD = 0.35  # ← Detection confidence (lower = more sensitive)
+DEBUG_MODE    = True      # ← Set False to enable real arm control
+```
+
+> **Finding your COM port**: In Windows, open **Device Manager → Ports (COM & LPT)**. The Arduino shows as `USB Serial Device (COMx)`.
+
+### Step 4: Find Your Camera Index (if needed)
+If the camera doesn't open, run:
+```bash
+python scan_cameras.py
+```
+It will list all working cameras and their indices. Update `CAMERA_INDEX` in `config.py` accordingly.
+
+### Step 5: Test Hardware Manually
+Before running AI, verify everything works:
+```bash
+python gui_test.py
+```
+- Top panel: live webcam feed
+- Bottom panel: logs showing `Camera OK` and `Connected to COMx`
+- Click **Pick Left / Center / Right** buttons — the arm should physically move and drop
+
+### Step 6: Run the Autonomous AI System
+Once hardware is verified:
 ```bash
 python main.py
 ```
-1. It will load the YOLOv8 model initially.
-2. A window will pop up showing the camera feed separated into 3 vertical zones (Left, Center, Right) defined by vertical lines.
-3. Place an orange (or any orange-like object) in the camera's view.
-4. The AI will immediately draw a targeting box around it, classify its zone mathematically, and automatically fire the perfect command to the robotic arm.
-5. Press the ESC key on your keyboard to stop the program safely when you are done.
+
+**What happens:**
+1. Connects to Arduino on the configured COM port
+2. Loads the YOLOv8 model (downloads ~6 MB on first run)
+3. Opens the external webcam (`USB2.0 PC CAMERA` at 1280×720 @ 8 FPS)
+4. Live window opens showing the camera feed with zone dividers (blue vertical lines)
+
+**In Debug Mode** (`DEBUG_MODE = True`):
+- All detected objects are shown with grey/green bounding boxes and labels
+- Cyan text at top shows detection count
+- Arm does **not** move — use this to verify detection is working
+
+**In Live Mode** (`DEBUG_MODE = False`):
+- Only oranges trigger arm movement
+- Orange bounding box + zone label shown
+- Command (`L` / `C` / `R`) sent to Arduino every `COMMAND_DELAY` seconds
+
+Press **ESC** to exit safely.
+
+---
+
+## 🔁 Full System Flow
+
+```
+[USB2.0 Webcam] → frame
+        ↓
+[YOLOv8 Model] → detects orange + bounding box
+        ↓
+[Zone Classifier] → center_x < 200? → L | 200-400? → C | > 400? → R
+        ↓
+[serial_comm.py] → sends "L" / "C" / "R" over USB Serial
+        ↓
+[Arduino (robot_arm.ino)] → pick_left/center/right → drop_object → goHome
+        ↓
+[4 Servo Motors] → physical arm movement
+```
+
+---
+
+## 🛠️ Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| `No module named 'serial'` | Run `pip install pyserial` |
+| `Error opening serial port COMx` | Check COM port in Device Manager, update `COM_PORT` in `config.py`. Close Arduino IDE Serial Monitor if open. |
+| Camera opens but no frame | Run `scan_cameras.py` to find correct index. Ensure `CAP_DSHOW` is used (already set). |
+| No objects detected | Enable `DEBUG_MODE = True`, lower `CONFIDENCE_THRESHOLD` to `0.25`, ensure good lighting |
+| Arm moves erratically | Confirm shared GND between Arduino and external servo power supply |
+| `yolov8n.pt` not found | Runs automatically on first launch. Ensure internet connection. |
