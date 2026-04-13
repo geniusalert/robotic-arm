@@ -16,27 +16,58 @@ def init_vision():
 def get_forced_external_camera():
     """
     Strongly enforces finding the external USB camera by checking frame width.
-    Skips the laptop built-in camera which typically initializes at 640x480.
+    Skips the laptop built-in camera which typically initializes at smaller resolutions.
     """
     from config import CAMERA_INDEX
-    # Try the preconfigured index first
+    import cv2
+    
+    print("Executing bulletproof external camera scan...")
+    # First, try the preferred CAMERA_INDEX with standard backend
     cap = cv2.VideoCapture(CAMERA_INDEX)
     if cap.isOpened():
-        # The USB camera is native 720p+, laptop camera is usually 640/480
-        if int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) >= 1280:
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        ret, frame = cap.read()
+        if ret and frame is not None and frame.shape[1] >= 1280:
             return cap
-        cap.release()  # It was the laptop camera, release it
+        cap.release()
 
-    # Fallback auto-discovery
+    # Try DSHOW on preferred index
+    cap = cv2.VideoCapture(CAMERA_INDEX, cv2.CAP_DSHOW)
+    if cap.isOpened():
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        ret, frame = cap.read()
+        if ret and frame is not None and frame.shape[1] >= 1280:
+            return cap
+        cap.release()
+
+    # Fallback auto-discovery to aggressively find any 1280 camera
     print("Warning: Forced camera logic triggered auto-scan to find 720p external device...")
     for i in range(5):
         if i == CAMERA_INDEX: continue # Already checked
+        
+        # Try MSMF
         cap = cv2.VideoCapture(i)
         if cap.isOpened():
-            if int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) >= 1280:
-                print(f"Auto-detected external camera at index {i}")
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+            ret, frame = cap.read()
+            if ret and frame is not None and frame.shape[1] >= 1280:
+                print(f"Auto-detected external camera at MSMF index {i}")
                 return cap
-            cap.release()
+        cap.release()
+        
+        # Try DSHOW
+        cap = cv2.VideoCapture(i, cv2.CAP_DSHOW)
+        if cap.isOpened():
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+            ret, frame = cap.read()
+            if ret and frame is not None and frame.shape[1] >= 1280:
+                print(f"Auto-detected external camera at DSHOW index {i}")
+                return cap
+        cap.release()
             
     return None
 
