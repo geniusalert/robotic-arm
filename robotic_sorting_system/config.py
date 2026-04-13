@@ -5,6 +5,11 @@ RIGHT_THRESHOLD = 400
 CONFIDENCE_THRESHOLD = 0.35  # Lowered for better detection sensitivity
 COMMAND_DELAY = 2  # seconds delay between commands to prevent rapid triggering
 
+# --- Vision Target Settings ---
+TARGET_MODE = "color"     # Options: "yolo" (AI shapes) or "color" (HSV color detection)
+TARGET_CLASS = "orange"   # Used if TARGET_MODE is "yolo" (e.g. "orange", "apple")
+TARGET_COLOR = "red"      # Used if TARGET_MODE is "color". Options: "red", "green", "blue", "yellow"
+
 # Camera index: 0 = built-in laptop cam, 1 = external USB webcam
 # Change to 0 if you want to use the built-in camera instead
 CAMERA_INDEX = 1
