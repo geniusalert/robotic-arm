@@ -113,23 +113,35 @@ def draw_debug_detections(frame):
     DEBUG MODE: Draws ALL detected objects on frame or color masks.
     """
     if TARGET_MODE == "color":
-        bounds = get_color_bounds(TARGET_COLOR)
         hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        mask = np.zeros(frame.shape[:2], dtype=np.uint8)
-        for lower, upper in bounds:
-            mask = cv2.bitwise_or(mask, cv2.inRange(hsv_frame, lower, upper))
+        
+        colors_to_check = {}
+        if TARGET_COLOR.lower().strip() == "all":
+            colors_to_check = get_all_colors()
+        else:
+            colors_to_check[TARGET_COLOR] = get_color_bounds(TARGET_COLOR)
             
-        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         count = 0
-        for cnt in contours:
-            if cv2.contourArea(cnt) > 500:
-                x, y, w, h = cv2.boundingRect(cnt)
-                cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
-                cv2.putText(frame, f"{TARGET_COLOR.capitalize()} Area", (x, y - 8),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 255, 0), 2)
-                count += 1
+        for color_name, bounds in colors_to_check.items():
+            mask = np.zeros(frame.shape[:2], dtype=np.uint8)
+            for lower, upper in bounds:
+                mask = cv2.bitwise_or(mask, cv2.inRange(hsv_frame, lower, upper))
                 
-        cv2.putText(frame, f"[DEBUG] {count} {TARGET_COLOR.capitalize()} object(s) detected", (10, 25),
+            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            for cnt in contours:
+                if cv2.contourArea(cnt) > 500:
+                    x, y, w, h = cv2.boundingRect(cnt)
+                    
+                    # Mapping colors to bounding box colors (BGR format)
+                    c_map = {"red": (0, 0, 255), "green": (0, 255, 0), "blue": (255, 0, 0), "yellow": (0, 255, 255), "orange": (0, 165, 255), "purple": (128, 0, 128)}
+                    box_color = c_map.get(color_name.lower(), (0, 255, 0))
+                    
+                    cv2.rectangle(frame, (x, y), (x+w, y+h), box_color, 2)
+                    cv2.putText(frame, f"{color_name.capitalize()}", (x, y - 8),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.65, box_color, 2)
+                    count += 1
+                    
+        cv2.putText(frame, f"[DEBUG] {count} colored object(s) detected", (10, 25),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 255), 2)
         return frame
     
