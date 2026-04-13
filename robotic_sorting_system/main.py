@@ -50,10 +50,10 @@ def main():
             # Draw ALL detections so you can see what the model is seeing
             frame = draw_debug_detections(frame)
         else:
-            # Detect objects in the frame (orange only)
+            # Detect objects in the frame (dynamically filtered by vision.py)
             label, bbox, center_x = detect_objects(frame)
             
-            if label and label.lower() == "orange":
+            if label:
                 x1, y1, x2, y2 = bbox
                 # Draw bounding box
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 165, 255), 2)
