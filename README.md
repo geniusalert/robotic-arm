@@ -15,6 +15,7 @@ robotic_sorting_system/
 ├── config.py            ← All tunable settings (COM port, camera, thresholds)
 ├── gui_test.py          ← Manual GUI tester for camera & arm motors
 ├── scan_cameras.py      ← Utility to detect available camera indices
+├── diagnose_camera.py   ← In-depth diagnostic tool for camera resolution testing
 ├── requirements.txt     ← Python dependencies
 │
 └── robot_arm/
@@ -54,7 +55,7 @@ Connect the Arduino to your laptop via a **USB-A to USB-B cable** (standard Ardu
 |-----------------------|------------|
 | USB2.0 PC CAMERA      | USB port on laptop |
 
-> The external webcam is automatically detected on index `1`. If detection fails, run `scan_cameras.py` to find the correct index and update `CAMERA_INDEX` in `config.py`.
+> The external webcam is firmly assigned to index `1` (720p) and your built-in laptop camera is index `0` (480p). Both `gui_test.py` and `main.py` respect the `CAMERA_INDEX` inside `config.py`. If you experience hardware connection issues, run `python diagnose_camera.py` for a full breakdown.
 
 ---
 
@@ -129,12 +130,12 @@ DEBUG_MODE    = True      # ← Set False to enable real arm control
 
 > **Finding your COM port**: In Windows, open **Device Manager → Ports (COM & LPT)**. The Arduino shows as `USB Serial Device (COMx)`.
 
-### Step 4: Find Your Camera Index (if needed)
-If the camera doesn't open, run:
+### Step 4: Validate Camera Configuration (if needed)
+If the camera doesn't open properly, run:
 ```bash
-python scan_cameras.py
+python diagnose_camera.py
 ```
-It will list all working cameras and their indices. Update `CAMERA_INDEX` in `config.py` accordingly.
+This utility checks all camera indices and attempts to read frames to verify resolutions. Update `CAMERA_INDEX` in `config.py` to the one showing `1280x720`.
 
 ### Step 5: Test Hardware Manually
 Before running AI, verify everything works:
@@ -195,7 +196,8 @@ Press **ESC** to exit safely.
 |---------|-----|
 | `No module named 'serial'` | Run `pip install pyserial` |
 | `Error opening serial port COMx` | Check COM port in Device Manager, update `COM_PORT` in `config.py`. Close Arduino IDE Serial Monitor if open. |
-| Camera opens but no frame | Run `scan_cameras.py` to find correct index. Ensure `CAP_DSHOW` is used (already set). |
+| Camera opens but no frame | Run `diagnose_camera.py` or `scan_cameras.py` to find correct index. Verify no other app is using the webcam. |
+| Camera loads laptop face cam | Ensure `CAMERA_INDEX = 1` in `config.py`. Index `0` is typically the laptop's built-in webcam. |
 | No objects detected | Enable `DEBUG_MODE = True`, lower `CONFIDENCE_THRESHOLD` to `0.25`, ensure good lighting |
 | Arm moves erratically | Confirm shared GND between Arduino and external servo power supply |
 | `yolov8n.pt` not found | Runs automatically on first launch. Ensure internet connection. |
