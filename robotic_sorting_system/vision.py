@@ -28,7 +28,8 @@ def get_all_colors():
         "blue": [(np.array([100, 150, 0]), np.array([140, 255, 255]))],
         "yellow": [(np.array([20, 100, 100]), np.array([30, 255, 255]))],
         "orange": [(np.array([11, 120, 70]), np.array([19, 255, 255]))],
-        "purple": [(np.array([140, 50, 50]), np.array([165, 255, 255]))]
+        "purple": [(np.array([140, 50, 50]), np.array([165, 255, 255]))],
+        "white": [(np.array([0, 0, 200]), np.array([180, 40, 255]))]
     }
 
 def get_color_bounds(color_name):
@@ -133,7 +134,11 @@ def draw_debug_detections(frame):
                     x, y, w, h = cv2.boundingRect(cnt)
                     
                     # Mapping colors to bounding box colors (BGR format)
-                    c_map = {"red": (0, 0, 255), "green": (0, 255, 0), "blue": (255, 0, 0), "yellow": (0, 255, 255), "orange": (0, 165, 255), "purple": (128, 0, 128)}
+                    c_map = {
+                        "red": (0, 0, 255), "green": (0, 255, 0), "blue": (255, 0, 0), 
+                        "yellow": (0, 255, 255), "orange": (0, 165, 255), "purple": (128, 0, 128),
+                        "white": (255, 255, 255)
+                    }
                     box_color = c_map.get(color_name.lower(), (0, 255, 0))
                     
                     cv2.rectangle(frame, (x, y), (x+w, y+h), box_color, 2)
