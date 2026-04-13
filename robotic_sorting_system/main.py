@@ -9,19 +9,13 @@ def main():
     init_serial()
     init_vision()
     
-    # Initialize camera using CAP_DSHOW (required on Windows for USB webcams to deliver frames)
-    print(f"Trying strictly to open camera index {CAMERA_INDEX} (USB2.0 PC CAMERA) with DirectShow backend...")
-    cap = cv2.VideoCapture(CAMERA_INDEX, cv2.CAP_DSHOW)
-    
-    # If it fails with DSHOW, let's try without it
-    if not cap.isOpened():
-        print(f"DirectShow failed, trying camera index {CAMERA_INDEX} with standard backend...")
-        cap = cv2.VideoCapture(CAMERA_INDEX)
+    from vision import get_forced_external_camera
+    print("Securing external camera feed (strict 720p check)...")
+    cap = get_forced_external_camera()
         
-    if not cap.isOpened():
-        print(f"Error: Could not open external webcam at index {CAMERA_INDEX} at all.")
-        print("Please run 'python scan_cameras.py' to find the correct external camera index.")
-        print("Then update CAMERA_INDEX in config.py. The program will not use your laptop camera.")
+    if cap is None or not cap.isOpened():
+        print("Error: Could not find the external webcam.")
+        print("Please ensure it is plugged in via USB and run 'python scan_cameras.py'.")
         return
 
     # Apply USB2.0 PC CAMERA hardware settings

@@ -13,6 +13,33 @@ def init_vision():
     model = YOLO("yolov8n.pt")  # Use YOLOv8 nano for speed
     print("Model loaded.")
 
+def get_forced_external_camera():
+    """
+    Strongly enforces finding the external USB camera by checking frame width.
+    Skips the laptop built-in camera which typically initializes at 640x480.
+    """
+    from config import CAMERA_INDEX
+    # Try the preconfigured index first
+    cap = cv2.VideoCapture(CAMERA_INDEX)
+    if cap.isOpened():
+        # The USB camera is native 720p+, laptop camera is usually 640/480
+        if int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) >= 1280:
+            return cap
+        cap.release()  # It was the laptop camera, release it
+
+    # Fallback auto-discovery
+    print("Warning: Forced camera logic triggered auto-scan to find 720p external device...")
+    for i in range(5):
+        if i == CAMERA_INDEX: continue # Already checked
+        cap = cv2.VideoCapture(i)
+        if cap.isOpened():
+            if int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) >= 1280:
+                print(f"Auto-detected external camera at index {i}")
+                return cap
+            cap.release()
+            
+    return None
+
 def detect_objects(frame):
     """
     Detects objects and filters for 'orange' with specific confidence.

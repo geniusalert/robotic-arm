@@ -4,7 +4,7 @@ import cv2
 from PIL import Image, ImageTk
 import serial
 import time
-from config import COM_PORT, BAUD_RATE
+from config import COM_PORT, BAUD_RATE, CAMERA_INDEX
 
 class RobotTesterApp:
     def __init__(self, root):
@@ -62,13 +62,14 @@ class RobotTesterApp:
         
     def init_hardware(self):
         # Init Camera
+        from vision import get_forced_external_camera
         try:
-            self.cap = cv2.VideoCapture(0)
-            if not self.cap.isOpened():
-                self.log("ERROR: Could not open Camera (Index 0).")
+            self.cap = get_forced_external_camera()
+            if self.cap is None or not self.cap.isOpened():
+                self.log(f"ERROR: Could not secure external 720p Camera feed.")
                 self.status_lbl.config(text="Status: Camera Error | Hardware Disconnected", fg="red")
             else:
-                self.log("Camera initialized successfully.")
+                self.log("External Camera initialized successfully.")
                 self.status_lbl.config(text="Status: Camera OK", fg="blue")
         except Exception as e:
             self.log(f"ERROR: Cannot initialize camera: {e}")
