@@ -9,12 +9,11 @@ def main():
     init_serial()
     init_vision()
     
-    from vision import get_forced_external_camera
-    print("Securing external camera feed (strict 720p check)...")
-    cap = get_forced_external_camera()
-        
-    if cap is None or not cap.isOpened():
-        print("Error: Could not find the external webcam.")
+    print(f"Opening external camera at index {CAMERA_INDEX}...")
+    cap = cv2.VideoCapture(CAMERA_INDEX)
+    
+    if not cap.isOpened():
+        print(f"Error: Could not open camera at index {CAMERA_INDEX}.")
         print("Please ensure it is plugged in via USB and run 'python scan_cameras.py'.")
         return
 

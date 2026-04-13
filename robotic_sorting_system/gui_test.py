@@ -61,16 +61,19 @@ class RobotTesterApp:
         self.log_text.config(state='disabled')
         
     def init_hardware(self):
-        # Init Camera
-        from vision import get_forced_external_camera
+        # Init Camera — force external USB webcam (index 1 = 1280x720)
         try:
-            self.cap = get_forced_external_camera()
-            if self.cap is None or not self.cap.isOpened():
-                self.log(f"ERROR: Could not secure external 720p Camera feed.")
+            self.log(f"Opening external camera at index {CAMERA_INDEX}...")
+            self.cap = cv2.VideoCapture(CAMERA_INDEX)
+            if not self.cap.isOpened():
+                self.log(f"ERROR: Could not open camera at index {CAMERA_INDEX}.")
                 self.status_lbl.config(text="Status: Camera Error | Hardware Disconnected", fg="red")
             else:
-                self.log("External Camera initialized successfully.")
-                self.status_lbl.config(text="Status: Camera OK", fg="blue")
+                # Verify it's the external camera by checking resolution
+                w = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                h = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                self.log(f"Camera opened: {w}x{h}")
+                self.status_lbl.config(text=f"Status: External Camera OK ({w}x{h})", fg="blue")
         except Exception as e:
             self.log(f"ERROR: Cannot initialize camera: {e}")
             

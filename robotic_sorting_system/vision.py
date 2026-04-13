@@ -13,64 +13,6 @@ def init_vision():
     model = YOLO("yolov8n.pt")  # Use YOLOv8 nano for speed
     print("Model loaded.")
 
-def get_forced_external_camera():
-    """
-    Strongly enforces finding the external USB camera by checking frame width.
-    Skips the laptop built-in camera which typically initializes at smaller resolutions.
-    """
-    from config import CAMERA_INDEX
-    import cv2
-    
-    print("Executing bulletproof external camera scan...")
-    # First, try the preferred CAMERA_INDEX with standard backend
-    cap = cv2.VideoCapture(CAMERA_INDEX)
-    if cap.isOpened():
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-        ret, frame = cap.read()
-        if ret and frame is not None and frame.shape[1] >= 1280:
-            return cap
-        cap.release()
-
-    # Try DSHOW on preferred index
-    cap = cv2.VideoCapture(CAMERA_INDEX, cv2.CAP_DSHOW)
-    if cap.isOpened():
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-        ret, frame = cap.read()
-        if ret and frame is not None and frame.shape[1] >= 1280:
-            return cap
-        cap.release()
-
-    # Fallback auto-discovery to aggressively find any 1280 camera
-    print("Warning: Forced camera logic triggered auto-scan to find 720p external device...")
-    for i in range(5):
-        if i == CAMERA_INDEX: continue # Already checked
-        
-        # Try MSMF
-        cap = cv2.VideoCapture(i)
-        if cap.isOpened():
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-            ret, frame = cap.read()
-            if ret and frame is not None and frame.shape[1] >= 1280:
-                print(f"Auto-detected external camera at MSMF index {i}")
-                return cap
-        cap.release()
-        
-        # Try DSHOW
-        cap = cv2.VideoCapture(i, cv2.CAP_DSHOW)
-        if cap.isOpened():
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-            ret, frame = cap.read()
-            if ret and frame is not None and frame.shape[1] >= 1280:
-                print(f"Auto-detected external camera at DSHOW index {i}")
-                return cap
-        cap.release()
-            
-    return None
-
 def detect_objects(frame):
     """
     Detects objects and filters for 'orange' with specific confidence.
