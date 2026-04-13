@@ -15,7 +15,7 @@ TARGET_COLOR = "red"      # Used if TARGET_MODE is "color". Options: "red", "gre
 CAMERA_INDEX = 1
 
 # USB2.0 PC CAMERA hardware settings
-CAMERA_FPS    = 8      # Camera native FPS
+CAMERA_FPS    = 30     # Maximize framerate for smoother live feed
 CAMERA_WIDTH  = 1280   # Capture width
 CAMERA_HEIGHT = 720    # Capture height
 
