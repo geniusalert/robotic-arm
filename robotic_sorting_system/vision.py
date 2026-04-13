@@ -17,34 +17,28 @@ def init_vision():
     else:
         print(f"Vision initialized in COLOR mode. Targeting: {TARGET_COLOR.upper()}")
 
-def get_color_bounds(color_name):
-    """
-    Returns the lower and upper HSV bounds for the specified color.
-    Red requires two ranges because it wraps around the HSV cylinder.
-    """
-    color = color_name.lower().strip()
-    if color == "red":
-        return [
+def get_all_colors():
+    """Returns a dictionary of all supported colors and their HSV bounds."""
+    return {
+        "red": [
             (np.array([0, 120, 70]), np.array([10, 255, 255])),
             (np.array([170, 120, 70]), np.array([180, 255, 255]))
-        ]
-    elif color == "green":
-        return [(np.array([40, 40, 40]), np.array([80, 255, 255]))]
-    elif color == "blue":
-        return [(np.array([100, 150, 0]), np.array([140, 255, 255]))]
-    elif color == "yellow":
-        return [(np.array([20, 100, 100]), np.array([30, 255, 255]))]
-    else:
-        # Default fallback to red
-        return [(np.array([0, 120, 70]), np.array([10, 255, 255]))]
+        ],
+        "green": [(np.array([40, 40, 40]), np.array([80, 255, 255]))],
+        "blue": [(np.array([100, 150, 0]), np.array([140, 255, 255]))],
+        "yellow": [(np.array([20, 100, 100]), np.array([30, 255, 255]))],
+        "orange": [(np.array([11, 120, 70]), np.array([19, 255, 255]))],
+        "purple": [(np.array([140, 50, 50]), np.array([165, 255, 255]))]
+    }
+
+def get_color_bounds(color_name):
+    """Returns bounds for a specific color."""
+    colors = get_all_colors()
+    return colors.get(color_name.lower().strip(), colors["red"])
 
 def detect_objects(frame):
     """
     Routes the detection to either color tracking or YOLO tracking.
-    Returns:
-        label (str): Class name or Color name
-        bbox (tuple): (x1, y1, x2, y2)
-        center_x (int): Horizontal center of the bounding box
     """
     if TARGET_MODE == "color":
         return detect_color_hsv(frame)
@@ -53,31 +47,36 @@ def detect_objects(frame):
 
 def detect_color_hsv(frame):
     """
-    Finds the largest contour of the target color using HSV thresholding.
+    Finds the largest contour across the allowed colors using HSV thresholding.
+    If TARGET_COLOR is 'all', it checks every color and returns the absolute largest object.
     """
     hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    bounds = get_color_bounds(TARGET_COLOR)
     
-    # Create mask combining all bounds
-    mask = np.zeros(hsv_frame.shape[:2], dtype=np.uint8)
-    for lower, upper in bounds:
-        mask = cv2.bitwise_or(mask, cv2.inRange(hsv_frame, lower, upper))
+    colors_to_check = {}
+    if TARGET_COLOR.lower().strip() == "all":
+        colors_to_check = get_all_colors()
+    else:
+        colors_to_check[TARGET_COLOR] = get_color_bounds(TARGET_COLOR)
         
-    # Find contours
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
     best_area = 0
     best_det = None
     
-    for cnt in contours:
-        area = cv2.contourArea(cnt)
-        if area > 500 and area > best_area:  # Minimum area threshold
-            best_area = area
-            x, y, w, h = cv2.boundingRect(cnt)
-            center_x = x + (w // 2)
-            label = f"{TARGET_COLOR.capitalize()} Object"
-            best_det = (label, (x, y, x + w, y + h), center_x)
+    for color_name, bounds in colors_to_check.items():
+        mask = np.zeros(hsv_frame.shape[:2], dtype=np.uint8)
+        for lower, upper in bounds:
+            mask = cv2.bitwise_or(mask, cv2.inRange(hsv_frame, lower, upper))
             
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        for cnt in contours:
+            area = cv2.contourArea(cnt)
+            if area > 500 and area > best_area:  # Minimum area threshold
+                best_area = area
+                x, y, w, h = cv2.boundingRect(cnt)
+                center_x = x + (w // 2)
+                label = f"{color_name.capitalize()} Object"
+                best_det = (label, (x, y, x + w, y + h), center_x)
+                
     return best_det if best_det else (None, None, None)
 
 def detect_yolo(frame):
