@@ -40,6 +40,9 @@ def main():
     
     print("Starting main loop... Press ESC to exit.")
     
+    # Allow the window to be maximized and perfectly scale the camera feed
+    cv2.namedWindow("Robotic Arm Object Sorting", cv2.WINDOW_NORMAL)
+    
     while True:
         ret, frame = cap.read()
         if not ret:
