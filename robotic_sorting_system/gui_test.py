@@ -105,8 +105,8 @@ class RobotTesterApp:
         if self.is_running and self.cap and self.cap.isOpened():
             ret, frame = self.cap.read()
             if ret:
-                # Resize to fit GUI comfortably
-                frame = cv2.resize(frame, (640, 480))
+                # Resize to fit GUI comfortably, maintaining true 16:9 aspect ratio (720p scaled down)
+                frame = cv2.resize(frame, (640, 360))
                 # Convert BGR to RGB for Tkinter display compatibility
                 cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 img = Image.fromarray(cv2image)

@@ -138,6 +138,7 @@ void drop_object() {
   moveSlowly(elbowServo, elbowDrop);
   delay(500);
   
+  
   gripperServo.write(gripperOpen); // Release object
   delay(500);
 }

@@ -1,6 +1,6 @@
 # 🦾 AI-Powered Robotic Arm Sorting System
 
-A complete computer-vision + robotics pipeline that detects objects (e.g. **oranges**) using an external USB webcam and a YOLOv8 AI model, classifies their position (Left / Center / Right), and commands an Arduino-controlled 4-servo robotic arm to pick and place them automatically.
+A complete computer-vision + robotics pipeline that detects objects using either **Universal Color Detection (HSV)** or a **YOLOv8 AI Model**. It classifies object positions (Left / Center / Right) and commands an Arduino-controlled 4-servo robotic arm to pick and place them automatically. Now optimized for high-performance 30 FPS processing and full-screen display.
 
 ---
 
@@ -55,7 +55,7 @@ Connect the Arduino to your laptop via a **USB-A to USB-B cable** (standard Ardu
 |-----------------------|------------|
 | USB2.0 PC CAMERA      | USB port on laptop |
 
-> The external webcam is firmly assigned to index `1` (720p) and your built-in laptop camera is index `0` (480p). Both `gui_test.py` and `main.py` respect the `CAMERA_INDEX` inside `config.py`. If you experience hardware connection issues, run `python diagnose_camera.py` for a full breakdown.
+> The external webcam is firmly assigned to index `1` (720p @ 30 FPS) and your built-in laptop camera is index `0` (480p). Both `gui_test.py` and `main.py` respect the `CAMERA_INDEX` inside `config.py`. If you experience hardware connection issues, run `python scan_cameras.py` for a full breakdown.
 
 ---
 
@@ -118,13 +118,21 @@ Open `config.py` and verify/update:
 
 ```python
 COM_PORT      = "COM9"    # ← Match your Arduino's COM port (check Device Manager)
+BAUD_RATE     = 9600      # ← Serial speed for Arduino communication
+
+# --- Vision Target Settings ---
+TARGET_MODE   = "color"   # ← "color" (HSV detection) or "yolo" (AI object detection)
+TARGET_COLOR  = "all"     # ← "red", "green", "blue", "yellow", "orange", "all"
+TARGET_CLASS  = "orange"  # ← Relevant only if TARGET_MODE is "yolo"
+
 CAMERA_INDEX  = 1         # ← 1 = external USB webcam, 0 = built-in laptop cam
-CAMERA_FPS    = 8         # ← USB2.0 PC CAMERA native FPS
+CAMERA_FPS    = 30        # ← Maximized for smooth live feed
 CAMERA_WIDTH  = 1280      # ← Camera resolution width
 CAMERA_HEIGHT = 720       # ← Camera resolution height
+
 LEFT_THRESHOLD  = 200     # ← Pixel X boundary for Left zone
 RIGHT_THRESHOLD = 400     # ← Pixel X boundary for Right zone
-CONFIDENCE_THRESHOLD = 0.35  # ← Detection confidence (lower = more sensitive)
+CONFIDENCE_THRESHOLD = 0.35 # ← AI detection confidence
 DEBUG_MODE    = True      # ← Set False to enable real arm control
 ```
 
@@ -153,20 +161,21 @@ python main.py
 ```
 
 **What happens:**
-1. Connects to Arduino on the configured COM port
-2. Loads the YOLOv8 model (downloads ~6 MB on first run)
-3. Opens the external webcam (`USB2.0 PC CAMERA` at 1280×720 @ 8 FPS)
-4. Live window opens showing the camera feed with zone dividers (blue vertical lines)
+1. Connects to Arduino on the configured COM port.
+2. Initializes the vision system (**Color HSV** or **YOLOv8** based on `config.py`).
+3. Opens the external webcam (`USB2.0 PC CAMERA` at 1280×720 @ 30 FPS).
+4. Live window opens in **Scalable/Full-screen Mode** showing the camera feed with blue zone dividers.
 
 **In Debug Mode** (`DEBUG_MODE = True`):
-- All detected objects are shown with grey/green bounding boxes and labels
-- Cyan text at top shows detection count
-- Arm does **not** move — use this to verify detection is working
+- All detected objects (colored or AI-classified) are shown with bounding boxes and labels.
+- For Color Mode: Different colors have matching box colors (e.g., Red box for red objects).
+- Top-left corner displays total detection count.
+- Arm does **not** move — use this to verify detection stability.
 
 **In Live Mode** (`DEBUG_MODE = False`):
-- Only oranges trigger arm movement
-- Orange bounding box + zone label shown
-- Command (`L` / `C` / `R`) sent to Arduino every `COMMAND_DELAY` seconds
+- Only the targeted object (specified in `TARGET_COLOR` or `TARGET_CLASS`) triggers arm movement.
+- Glowing orange bounding box + zone label shown on target.
+- Command (`L` / `C` / `R`) sent to Arduino every `COMMAND_DELAY` seconds.
 
 Press **ESC** to exit safely.
 
@@ -175,9 +184,9 @@ Press **ESC** to exit safely.
 ## 🔁 Full System Flow
 
 ```
-[USB2.0 Webcam] → frame
+[USB2.0 Webcam] → 720p @ 30 FPS frame
         ↓
-[YOLOv8 Model] → detects orange + bounding box
+[Vision System] → Finds Targeted Color (HSV) OR YOLOv8 AI Object
         ↓
 [Zone Classifier] → center_x < 200? → L | 200-400? → C | > 400? → R
         ↓
